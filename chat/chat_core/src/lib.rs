@@ -4,11 +4,11 @@ mod utils;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use thiserror::Error;
+use utoipa::ToSchema;
 
 pub use middlewares::*;
-use thiserror::Error;
 pub use utils::*;
-use utoipa::ToSchema;
 
 #[derive(Debug, Clone, FromRow, ToSchema, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -56,7 +56,7 @@ pub enum ChatType {
     PublicChannel,
 }
 
-#[derive(Debug, Clone, FromRow, ToSchema, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, FromRow, ToSchema, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all(serialize = "camelCase"))]
 pub struct Chat {
     pub id: i64,
@@ -107,7 +107,7 @@ pub enum AgentError {
     Network(String),
 }
 
-#[derive(Debug, Clone, ToSchema, Serialize, Deserialize, PartialEq, sqlx::Type)]
+#[derive(Debug, Clone, ToSchema, Serialize, Deserialize, PartialEq, PartialOrd, sqlx::Type)]
 #[sqlx(type_name = "agent_type", rename_all = "snake_case")]
 #[serde(rename_all(serialize = "camelCase"))]
 pub enum AgentType {
