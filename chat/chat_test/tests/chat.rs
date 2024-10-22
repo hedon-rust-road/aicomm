@@ -64,7 +64,7 @@ impl ChatServer {
     async fn signin(&self) -> anyhow::Result<String> {
         let res = self
             .client
-            .post(&format!("http://{}/api/signin", self.addr))
+            .post(format!("http://{}/api/signin", self.addr))
             .header("Content-Type", "application/json")
             .body(r#"{"email": "hedon@acme.com", "password": "123456"}"#)
             .send()
@@ -79,7 +79,7 @@ impl ChatServer {
     async fn create_chat(&self) -> anyhow::Result<Chat> {
         let res = self
             .client
-            .post(&format!("http://{}/api/chats", self.addr))
+            .post(format!("http://{}/api/chats", self.addr))
             .header("Authorization", format!("Bearer {}", self.token))
             .header("Content-Type", "application/json")
             .body(r#"{"name": "test", "ws_id":1, "members": [1,2], "public": false}"#)
@@ -104,7 +104,7 @@ impl ChatServer {
 
         let res = self
             .client
-            .post(&format!("http://{}/api/upload", self.addr))
+            .post(format!("http://{}/api/upload", self.addr))
             .header("Authorization", format!("Bearer {}", self.token))
             .multipart(form)
             .send()
