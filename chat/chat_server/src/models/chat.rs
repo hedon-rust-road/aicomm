@@ -71,7 +71,7 @@ impl AppState {
         let chat: Chat = sqlx::query_as(
             r#"INSERT INTO chats(ws_id, name, type, members)
             VALUES($1, $2, $3, $4)
-            RETURNING id, ws_id, name, type, members, created_at"#,
+            RETURNING id, ws_id, name, type, members, agents, created_at"#,
         )
         .bind(ws_id as i64)
         .bind(input.name)
@@ -86,7 +86,7 @@ impl AppState {
     pub async fn fetch_chats(&self, user_id: u64, ws_id: u64) -> Result<Vec<Chat>, AppError> {
         let chats = sqlx::query_as(
             r#"
-            SELECT id, ws_id, name, type, members,created_at
+            SELECT id, ws_id, name, type, members, agents, created_at
             FROM chats
             WHERE ws_id = $1 AND $2 = ANY(members)"#,
         )
@@ -101,7 +101,7 @@ impl AppState {
     pub async fn get_chat_by_id(&self, chat_id: u64) -> Result<Option<Chat>, AppError> {
         let chat = sqlx::query_as(
             r#"
-            SELECT id, ws_id, name, type, members, created_at
+            SELECT id, ws_id, name, type, members, agents, created_at
             FROM chats
             WHERE id = $1"#,
         )

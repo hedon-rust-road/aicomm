@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 
 pub use middlewares::*;
+use thiserror::Error;
 pub use utils::*;
 use utoipa::ToSchema;
 
@@ -64,6 +65,7 @@ pub struct Chat {
     pub name: Option<String>,
     pub r#type: ChatType,
     pub members: Vec<i64>,
+    pub agents: Vec<i64>,
     #[serde(alias = "createdAt")]
     pub created_at: DateTime<Utc>,
 }
@@ -77,9 +79,57 @@ pub struct Message {
     #[serde(alias = "senderId")]
     pub sender_id: i64,
     pub content: String,
+    pub modified_content: Option<String>,
     pub files: Vec<String>,
     #[serde(alias = "createdAt")]
     pub created_at: DateTime<Utc>,
+}
+
+#[allow(async_fn_in_trait)]
+pub trait Agent {
+    async fn process(&self, msg: Message, ctx: &AgentContext) -> Result<AgentDecision, AgentError>;
+}
+
+#[derive(Debug, Clone)]
+pub struct AgentContext {}
+
+#[derive(Debug, Clone)]
+pub enum AgentDecision {
+    Modify(String),
+    Reply(String),
+    Delete,
+    None,
+}
+
+#[derive(Debug, Error)]
+pub enum AgentError {
+    #[error("network error: {0}")]
+    Network(String),
+}
+
+#[derive(Debug, Clone, ToSchema, Serialize, Deserialize, PartialEq, sqlx::Type)]
+#[sqlx(type_name = "agent_type", rename_all = "snake_case")]
+#[serde(rename_all(serialize = "camelCase"))]
+pub enum AgentType {
+    #[serde(alias = "proxy", alias = "Proxy")]
+    Proxy,
+    #[serde(alias = "reply", alias = "Reply")]
+    Reply,
+    #[serde(alias = "tap", alias = "Tap")]
+    Tap,
+}
+
+#[derive(Debug, Clone, FromRow, ToSchema, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all(serialize = "camelCase"))]
+pub struct ChatAgent {
+    pub id: i64,
+    pub chat_id: i64,
+    pub name: String,
+    pub r#type: AgentType,
+    pub prompt: String,
+    pub args: sqlx::types::Json<serde_json::Value>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 #[cfg(test)]
