@@ -1,0 +1,37 @@
+### signin - valid
+# @name signin
+POST http://localhost:6688/api/signin
+Content-Type: application/json
+
+{
+    "email": "hedon@example.com",
+    "password": "123456"
+}
+
+@token = {{signin.response.body.token}}
+
+### get chat list
+GET http://localhost:6688/api/chats
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### create a chat
+POST http://localhost:6688/api/chats
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+    "name": "hedon chat",
+    "members": [1,2],
+    "public": true
+}
+
+### create direct chat
+POST http://localhost:6688/api/chats
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+    "members": [1, 2],
+    "public": false
+}

@@ -1,0 +1,56 @@
+### signin - valid
+# @name signin
+POST http://localhost:6688/api/signin
+Content-Type: application/json
+
+{
+    "email": "john@example.com",
+    "password": "123456"
+}
+
+@token = {{signin.response.body.token}}
+
+### upload files
+POST http://localhost:6688/api/upload
+Content-Type: multipart/form-data; boundary=MyBoundary
+Authorization: Bearer {{token}}
+
+--MyBoundary
+Content-Disposition: form-data; filename="test.sql"
+Content-Type: application/octet-stream
+
+< /Users/hedon/rust/hedon-rust-road/chat/chat_server/fixtures/test.sql
+--MyBoundary
+Content-Disposition: form-data; filename="hello.txt"
+Content-Type: text/plain
+
+Hello, World!
+--MyBoundary--
+
+### get files
+GET http://localhost:6688/api/files
+Authorization: Bearer {{token}}
+
+### send a message
+POST http://localhost:6688/api/chats/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "content": "Hello, World!",
+    "files": ["/files/1/317/ac5/b006140d7c80917afec90d59e4fb5f2335.sql"]
+}
+
+### send a message without files
+POST http://localhost:6688/api/chats/2
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "content": "Hello, World from John 111!",
+    "files": []
+}
+
+### get messages
+GET http://localhost:6688/api/chats/1/messages?last_id=5&limit=10
+Authorization: Bearer {{token}}

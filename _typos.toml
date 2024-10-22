@@ -1,0 +1,10 @@
+[default.extend-words]
+
+[files]
+extend-exclude = [
+    "CHANGELOG.md",
+    "notebooks/*",
+    ".gitignore",
+    "**/notify_server/index.html",
+    "**/node_modules/*",
+]
