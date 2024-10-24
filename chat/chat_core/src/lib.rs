@@ -1,14 +1,35 @@
-mod middlewares;
 mod utils;
+
+pub mod middlewares;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use thiserror::Error;
+pub use utils::*;
 use utoipa::ToSchema;
 
-pub use middlewares::*;
-pub use utils::*;
+#[allow(async_fn_in_trait)]
+pub trait Agent {
+    async fn process(&self, msg: Message, ctx: &AgentContext) -> Result<AgentDecision, AgentError>;
+}
+
+#[derive(Debug, Clone)]
+pub struct AgentContext {}
+
+#[derive(Debug, Clone)]
+pub enum AgentDecision {
+    Modify(String),
+    Reply(String),
+    Delete,
+    None,
+}
+
+#[derive(Error, Debug)]
+pub enum AgentError {
+    #[error("Network error: {0}")]
+    Network(String),
+}
 
 #[derive(Debug, Clone, FromRow, ToSchema, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -85,28 +106,6 @@ pub struct Message {
     pub created_at: DateTime<Utc>,
 }
 
-#[allow(async_fn_in_trait)]
-pub trait Agent {
-    async fn process(&self, msg: Message, ctx: &AgentContext) -> Result<AgentDecision, AgentError>;
-}
-
-#[derive(Debug, Clone)]
-pub struct AgentContext {}
-
-#[derive(Debug, Clone)]
-pub enum AgentDecision {
-    Modify(String),
-    Reply(String),
-    Delete,
-    None,
-}
-
-#[derive(Debug, Error)]
-pub enum AgentError {
-    #[error("network error: {0}")]
-    Network(String),
-}
-
 #[derive(Debug, Clone, ToSchema, Serialize, Deserialize, PartialEq, PartialOrd, sqlx::Type)]
 #[sqlx(type_name = "agent_type", rename_all = "snake_case")]
 #[serde(rename_all(serialize = "camelCase"))]
@@ -127,12 +126,11 @@ pub struct ChatAgent {
     pub name: String,
     pub r#type: AgentType,
     pub prompt: String,
-    pub args: sqlx::types::Json<serde_json::Value>,
+    pub args: sqlx::types::Json<serde_json::Value>, // TODO: change to custom type
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
 
-#[cfg(test)]
 impl User {
     pub fn new(id: i64, fullname: &str, email: &str) -> Self {
         Self {

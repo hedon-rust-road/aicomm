@@ -1,6 +1,7 @@
+use super::{REQUEST_ID_HEADER, SERVER_TIME_HEADER};
 use axum::{extract::Request, response::Response};
-use futures_util::Future;
 use std::{
+    future::Future,
     pin::Pin,
     task::{Context, Poll},
 };
@@ -8,33 +9,32 @@ use tokio::time::Instant;
 use tower::{Layer, Service};
 use tracing::warn;
 
-use super::{REQUEST_ID_HEADER, REQUEST_TIME_HEADER};
-
 #[derive(Clone)]
 pub struct ServerTimeLayer;
 
 impl<S> Layer<S> for ServerTimeLayer {
-    type Service = MyMiddleware<S>;
+    type Service = ServerTimeMiddleware<S>;
 
     fn layer(&self, inner: S) -> Self::Service {
-        MyMiddleware { inner }
+        ServerTimeMiddleware { inner }
     }
 }
 
 #[derive(Clone)]
-pub struct MyMiddleware<S> {
+pub struct ServerTimeMiddleware<S> {
     inner: S,
 }
 
-impl<S> Service<Request> for MyMiddleware<S>
+impl<S> Service<Request> for ServerTimeMiddleware<S>
 where
     S: Service<Request, Response = Response> + Send + 'static,
     S::Future: Send + 'static,
 {
     type Response = S::Response;
     type Error = S::Error;
+    // `BoxFuture` is a type alias for `Pin<Box<dyn Future + Send + 'a>>`
     type Future =
-        Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + 'static + Send>>;
+        Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send + 'static>>;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         self.inner.poll_ready(cx)
@@ -44,21 +44,22 @@ where
         let start = Instant::now();
         let future = self.inner.call(request);
         Box::pin(async move {
-            let mut response: Response = future.await?;
+            let mut res: Response = future.await?;
             let elapsed = format!("{}us", start.elapsed().as_micros());
             match elapsed.parse() {
                 Ok(v) => {
-                    response.headers_mut().insert(REQUEST_TIME_HEADER, v);
+                    res.headers_mut().insert(SERVER_TIME_HEADER, v);
                 }
                 Err(e) => {
                     warn!(
-                        "Parsed elapsed time for request {:?} failed: {}",
-                        response.headers().get(REQUEST_ID_HEADER),
-                        e
+                        "Parse elapsed time failed: {} for request {:?}",
+                        e,
+                        res.headers().get(REQUEST_ID_HEADER)
                     );
                 }
             }
-            Ok(response)
+
+            Ok(res)
         })
     }
 }

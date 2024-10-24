@@ -7,4 +7,5 @@ extend-exclude = [
     ".gitignore",
     "**/notify_server/index.html",
     "**/node_modules/*",
+    "**/fixtures/**",
 ]

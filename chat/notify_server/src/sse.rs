@@ -1,5 +1,4 @@
-use std::{convert::Infallible, time::Duration};
-
+use crate::{AppEvent, AppState};
 use axum::{
     extract::State,
     response::{sse::Event, Sse},
@@ -7,13 +6,12 @@ use axum::{
 };
 use chat_core::User;
 use futures::Stream;
+use std::{convert::Infallible, time::Duration};
 use tokio::sync::broadcast;
 use tokio_stream::{wrappers::BroadcastStream, StreamExt};
-use tracing::debug;
+use tracing::{debug, info};
 
-use crate::{AppEvent, AppState};
-
-const CHANNEL_CAPACITY: usize = 1024;
+const CHANNEL_CAPACITY: usize = 256;
 
 pub(crate) async fn sse_handler(
     Extension(user): Extension<User>,
@@ -25,12 +23,11 @@ pub(crate) async fn sse_handler(
     let rx = if let Some(tx) = users.get(&user_id) {
         tx.subscribe()
     } else {
-        debug!("User not found: {}", user_id);
         let (tx, rx) = broadcast::channel(CHANNEL_CAPACITY);
         state.users.insert(user_id, tx);
-        debug!("User added: {}", user_id);
         rx
     };
+    info!("User {} subscribed", user_id);
 
     let stream = BroadcastStream::new(rx).filter_map(|v| v.ok()).map(|v| {
         let name = match v.as_ref() {
@@ -40,7 +37,7 @@ pub(crate) async fn sse_handler(
             AppEvent::NewMessage(_) => "NewMessage",
         };
         let v = serde_json::to_string(&v).expect("Failed to serialize event");
-        debug!("Sending SSE event: {}: {:?}", name, v);
+        debug!("Sending event {}: {:?}", name, v);
         Ok(Event::default().data(v).event(name))
     });
 

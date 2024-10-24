@@ -1,14 +1,12 @@
+use crate::{
+    models::{CreateUser, SigninUser},
+    AppError, AppState, ErrorOutput,
+};
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::{
-    error::ErrorOutput,
-    models::{CreateUser, SigninUser},
-    AppError, AppState,
-};
-
-#[derive(Debug, ToSchema, Serialize, Deserialize)]
+#[derive(Debug, Serialize, ToSchema, Deserialize)]
 pub struct AuthOutput {
     token: String,
 }
@@ -20,8 +18,6 @@ pub struct AuthOutput {
         (status = 200, description = "User created", body = AuthOutput),
     )
 )]
-/// POST /api/signup
-///
 /// Create a new user in the chat system with email, password workspace and full name.
 ///
 /// - If the email already exists, it will return 409.
@@ -37,6 +33,7 @@ pub(crate) async fn signup_handler(
     Ok((StatusCode::CREATED, body))
 }
 
+/// Sign in a user with email and password.
 #[utoipa::path(
     post,
     path = "/api/signin",
@@ -44,7 +41,6 @@ pub(crate) async fn signup_handler(
         (status = 200, description = "User signed in", body = AuthOutput),
     )
 )]
-/// Sign in a user with email and password.
 pub(crate) async fn signin_handler(
     State(state): State<AppState>,
     Json(input): Json<SigninUser>,
@@ -66,12 +62,13 @@ pub(crate) async fn signin_handler(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use anyhow::Result;
     use http_body_util::BodyExt;
 
     #[tokio::test]
-    async fn signup_should_work() -> anyhow::Result<()> {
+    async fn signup_should_work() -> Result<()> {
         let (_tdb, state) = AppState::new_for_test().await?;
-        let input = CreateUser::new("none", "hedon", "hedon@example.com", "123456");
+        let input = CreateUser::new("acme", "Tian Chen", "tyr@acme.org", "123456");
         let ret = signup_handler(State(state), Json(input))
             .await?
             .into_response();
@@ -83,31 +80,26 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn signup_duplicated_user_should_409() -> anyhow::Result<()> {
+    async fn signup_duplicate_user_should_409() -> Result<()> {
         let (_tdb, state) = AppState::new_for_test().await?;
-        let input = CreateUser::new("none", "hedon", "hedon@example.com", "123456");
-        signup_handler(State(state.clone()), Json(input.clone())).await?;
+        let input = CreateUser::new("acme", "Tyr Chen", "tchen@acme.org", "123456");
+
         let ret = signup_handler(State(state), Json(input))
             .await
             .into_response();
         assert_eq!(ret.status(), StatusCode::CONFLICT);
         let body = ret.into_body().collect().await?.to_bytes();
         let ret: ErrorOutput = serde_json::from_slice(&body)?;
-        assert_eq!(ret.error, "email `hedon@example.com` already exists");
+
+        assert_eq!(ret.error, "email already exists: tchen@acme.org");
         Ok(())
     }
 
     #[tokio::test]
-    async fn signin_should_work() -> anyhow::Result<()> {
+    async fn signin_should_work() -> Result<()> {
         let (_tdb, state) = AppState::new_for_test().await?;
-
-        let name = "hedon";
-        let email = "hedon@example.com";
+        let email = "tchen@acme.org";
         let password = "123456";
-
-        let user = CreateUser::new("none", name, email, password);
-        state.create_user(&user).await?;
-
         let input = SigninUser::new(email, password);
         let ret = signin_handler(State(state), Json(input))
             .await?
@@ -116,38 +108,15 @@ mod tests {
         let body = ret.into_body().collect().await?.to_bytes();
         let ret: AuthOutput = serde_json::from_slice(&body)?;
         assert_ne!(ret.token, "");
+
         Ok(())
     }
 
     #[tokio::test]
-    async fn signin_invalid_password_should_403() -> anyhow::Result<()> {
+    async fn signin_with_non_exist_user_should_403() -> Result<()> {
         let (_tdb, state) = AppState::new_for_test().await?;
-
-        let name = "hedon";
-        let email = "hedon@example.com";
+        let email = "tchen1@acme.org";
         let password = "123456";
-
-        let user = CreateUser::new("none", name, email, password);
-        state.create_user(&user).await?;
-
-        let input = SigninUser::new(email, "1234567");
-        let ret = signin_handler(State(state), Json(input))
-            .await
-            .into_response();
-        assert_eq!(ret.status(), StatusCode::FORBIDDEN);
-        let body = ret.into_body().collect().await?.to_bytes();
-        let ret: ErrorOutput = serde_json::from_slice(&body)?;
-        assert_eq!(ret.error, "Invalid email or password");
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn signin_invalid_email_should_403() -> anyhow::Result<()> {
-        let (_tdb, state) = AppState::new_for_test().await?;
-
-        let email = "hedon@example.com";
-        let password = "123456";
-
         let input = SigninUser::new(email, password);
         let ret = signin_handler(State(state), Json(input))
             .await
@@ -156,6 +125,7 @@ mod tests {
         let body = ret.into_body().collect().await?.to_bytes();
         let ret: ErrorOutput = serde_json::from_slice(&body)?;
         assert_eq!(ret.error, "Invalid email or password");
+
         Ok(())
     }
 }

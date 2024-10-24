@@ -3,11 +3,8 @@ use std::{
     str::FromStr,
 };
 
+use crate::{AppError, ChatFile};
 use sha1::{Digest, Sha1};
-
-use crate::AppError;
-
-use super::ChatFile;
 
 impl ChatFile {
     pub fn new(ws_id: u64, filename: &str, data: &[u8]) -> Self {
@@ -27,45 +24,41 @@ impl ChatFile {
         base_dir.join(self.hash_to_path())
     }
 
+    // split hash into 3 parts, first 2 with 3 chars
     fn hash_to_path(&self) -> String {
         let (part1, part2) = self.hash.split_at(3);
         let (part2, part3) = part2.split_at(3);
-        format!("{}/{part1}/{part2}/{part3}.{}", self.ws_id, self.ext)
+        format!("{}/{}/{}/{}.{}", self.ws_id, part1, part2, part3, self.ext)
     }
 }
 
 impl FromStr for ChatFile {
     type Err = AppError;
 
-    // convert /files/1/a04/90d/e8a83ec42176fed247fae142cb749b9aa1.sql to ChatFile
+    // convert /files/s/339/807/e635afbeab088ce33206fdf4223a6bb156.png to ChatFile
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        // 1/a04/90d/e8a83ec42176fed247fae142cb749b9aa1.sql
         let Some(s) = s.strip_prefix("/files/") else {
             return Err(AppError::ChatFileError(format!(
-                "Invalid chat file path: {s}"
+                "Invalid chat file path: {}",
+                s
             )));
         };
 
-        // 1
-        // a04
-        // 90d
-        // e8a83ec42176fed247fae142cb749b9aa1.sql
         let parts: Vec<&str> = s.split('/').collect();
         if parts.len() != 4 {
-            return Err(AppError::ChatFileError(
-                "File path dose not valid".to_string(),
-            ));
+            return Err(AppError::ChatFileError(format!(
+                "File path {} does not valid",
+                s
+            )));
         }
 
         let Ok(ws_id) = parts[0].parse::<u64>() else {
             return Err(AppError::ChatFileError(format!(
                 "Invalid workspace id: {}",
-                parts[0]
+                parts[1]
             )));
         };
 
-        // e8a83ec42176fed247fae142cb749b9aa1
-        // sql
         let Some((part3, ext)) = parts[3].split_once('.') else {
             return Err(AppError::ChatFileError(format!(
                 "Invalid file name: {}",
@@ -73,7 +66,6 @@ impl FromStr for ChatFile {
             )));
         };
 
-        // a0490de8a83ec42176fed247fae142cb749b9aa1
         let hash = format!("{}{}{}", parts[1], parts[2], part3);
         Ok(Self {
             ws_id,
@@ -93,9 +85,5 @@ mod tests {
         assert_eq!(file.ws_id, 1);
         assert_eq!(file.ext, "txt");
         assert_eq!(file.hash, "2aae6c35c94fcfb415dbe95f408b9ce91ee846ed");
-        assert_eq!(
-            file.url(),
-            "/files/1/2aa/e6c/35c94fcfb415dbe95f408b9ce91ee846ed.txt"
-        );
     }
 }

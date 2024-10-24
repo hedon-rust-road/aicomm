@@ -7,6 +7,7 @@ const routes = [
   { path: '/', name: 'Chat', component: Chat, meta: { requiresAuth: true } },
   { path: '/login', name: 'Login', component: Login },
   { path: '/register', name: 'Register', component: Register },
+
 ];
 
 const router = createRouter({

@@ -1,13 +1,13 @@
 mod chat;
 mod file;
-mod message;
+mod messages;
 mod user;
 mod workspace;
 
-pub use chat::*;
-pub use message::*;
+pub use chat::CreateChat;
+pub use messages::{CreateMessage, ListMessages};
 use serde::{Deserialize, Serialize};
-pub use user::*;
+pub use user::{CreateUser, SigninUser};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChatFile {

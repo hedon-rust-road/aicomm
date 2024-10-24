@@ -10,18 +10,19 @@ use axum::{
     routing::get,
     Router,
 };
-use chat_core::{verify_token, DecodingKey, TokenVerify};
+use chat_core::{
+    middlewares::{verify_token, TokenVerify},
+    DecodingKey, User,
+};
 use dashmap::DashMap;
-use error::AppError;
 use sse::sse_handler;
 use std::{ops::Deref, sync::Arc};
 use tokio::sync::broadcast;
 use tower_http::cors::{self, CorsLayer};
 
 pub use config::AppConfig;
-pub use notif::{setup_pg_listener, AppEvent};
-
-const INDEX_HTML: &str = include_str!("../index.html");
+pub use error::AppError;
+pub use notif::AppEvent;
 
 pub type UserMap = Arc<DashMap<u64, broadcast::Sender<Arc<AppEvent>>>>;
 
@@ -30,15 +31,18 @@ pub struct AppState(Arc<AppStateInner>);
 
 pub struct AppStateInner {
     pub config: AppConfig,
-    pub users: UserMap,
+    users: UserMap,
     dk: DecodingKey,
 }
 
+const INDEX_HTML: &str = include_str!("../index.html");
+
 pub async fn get_router(config: AppConfig) -> anyhow::Result<Router> {
     let state = AppState::new(config);
-    setup_pg_listener(state.clone()).await?;
+    notif::setup_pg_listener(state.clone()).await?;
 
     let cors = CorsLayer::new()
+        // allow `GET` and `POST` when accessing the resource
         .allow_methods([
             Method::GET,
             Method::POST,
@@ -49,13 +53,14 @@ pub async fn get_router(config: AppConfig) -> anyhow::Result<Router> {
         .allow_origin(cors::Any)
         .allow_headers(cors::Any);
 
-    let router = Router::new()
+    let app = Router::new()
         .route("/events", get(sse_handler))
         .layer(from_fn_with_state(state.clone(), verify_token::<AppState>))
         .layer(cors)
         .route("/", get(index_handler))
-        .with_state(state.clone());
-    Ok(router)
+        .with_state(state);
+
+    Ok(app)
 }
 
 async fn index_handler() -> impl IntoResponse {
@@ -64,13 +69,15 @@ async fn index_handler() -> impl IntoResponse {
 
 impl TokenVerify for AppState {
     type Error = AppError;
-    fn verify(&self, token: &str) -> Result<chat_core::User, Self::Error> {
+
+    fn verify(&self, token: &str) -> Result<User, Self::Error> {
         Ok(self.dk.verify(token)?)
     }
 }
 
 impl Deref for AppState {
     type Target = AppStateInner;
+
     fn deref(&self) -> &Self::Target {
         &self.0
     }

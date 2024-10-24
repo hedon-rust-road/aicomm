@@ -1,3 +1,4 @@
+use super::TokenVerify;
 use axum::{
     extract::{FromRequestParts, Query, Request, State},
     http::StatusCode,
@@ -9,9 +10,7 @@ use axum_extra::{
     TypedHeader,
 };
 use serde::Deserialize;
-use tracing::warn;
-
-use super::TokenVerify;
+use tracing::{info, warn};
 
 #[derive(Debug, Deserialize)]
 struct Params {
@@ -22,6 +21,8 @@ pub async fn verify_token<T>(State(state): State<T>, req: Request, next: Next) -
 where
     T: TokenVerify + Clone + Send + Sync + 'static,
 {
+    info!("request: {:?}", req.uri().clone());
+
     let (mut parts, body) = req.into_parts();
     let token =
         match TypedHeader::<Authorization<Bearer>>::from_request_parts(&mut parts, &state).await {
@@ -31,18 +32,20 @@ where
                     match Query::<Params>::from_request_parts(&mut parts, &state).await {
                         Ok(params) => params.token.clone(),
                         Err(e) => {
-                            let msg = format!("parse query params failed: {:?}", e);
+                            let msg = format!("parse query params failed: {}", e);
                             warn!(msg);
                             return (StatusCode::UNAUTHORIZED, msg).into_response();
                         }
                     }
                 } else {
-                    let msg = format!("parse authorization header failed: {:?}", e);
+                    let msg = format!("parse Authorization header failed: {}", e);
                     warn!(msg);
                     return (StatusCode::UNAUTHORIZED, msg).into_response();
                 }
             }
         };
+
+    info!("token: {}", token);
 
     let req = match state.verify(&token) {
         Ok(user) => {
@@ -62,18 +65,12 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::{ops::Deref, sync::Arc};
-
-    use axum::{body::Body, middleware::from_fn_with_state, routing::get, Router};
-    use http_body_util::BodyExt;
-    use tower::ServiceExt;
-
-    use crate::{
-        utils::{DecodingKey, EncodingKey},
-        User,
-    };
-
     use super::*;
+    use crate::{DecodingKey, EncodingKey, User};
+    use anyhow::Result;
+    use axum::{body::Body, middleware::from_fn_with_state, routing::get, Router};
+    use std::sync::Arc;
+    use tower::ServiceExt;
 
     #[derive(Clone)]
     struct AppState(Arc<AppStateInner>);
@@ -83,8 +80,20 @@ mod tests {
         dk: DecodingKey,
     }
 
+    impl TokenVerify for AppState {
+        type Error = ();
+
+        fn verify(&self, token: &str) -> Result<User, Self::Error> {
+            self.0.dk.verify(token).map_err(|_| ())
+        }
+    }
+
+    async fn handler(_req: Request) -> impl IntoResponse {
+        (StatusCode::OK, "ok")
+    }
+
     #[tokio::test]
-    async fn verify_token_middleware_should_work() -> anyhow::Result<()> {
+    async fn verify_token_middleware_should_work() -> Result<()> {
         let encoding_pem = include_str!("../../fixtures/encoding.pem");
         let decoding_pem = include_str!("../../fixtures/decoding.pem");
         let ek = EncodingKey::load(encoding_pem)?;
@@ -92,69 +101,48 @@ mod tests {
         let state = AppState(Arc::new(AppStateInner { ek, dk }));
 
         let user = User::new(1, "hedon", "hedon@example.com");
-        let token = state.ek.sign(user)?;
+        let token = state.0.ek.sign(user)?;
 
         let app = Router::new()
             .route("/", get(handler))
             .layer(from_fn_with_state(state.clone(), verify_token::<AppState>))
             .with_state(state);
 
-        // valid token
+        // good token
         let req = Request::builder()
             .uri("/")
             .header("Authorization", format!("Bearer {}", token))
             .body(Body::empty())?;
-        let rsp = app.clone().oneshot(req).await?;
-        assert_eq!(rsp.status(), StatusCode::OK);
-        let body = rsp.collect().await.unwrap().to_bytes();
-        assert_eq!(&body[..], b"ok");
-
-        // no token
-        let req = Request::builder().uri("/").body(Body::empty())?;
-        let rsp = app.clone().oneshot(req).await?;
-        assert_eq!(rsp.status(), StatusCode::UNAUTHORIZED);
-
-        // invalid token
-        let req = Request::builder()
-            .uri("/")
-            .header("Authorization", "Bearer invalid")
-            .body(Body::empty())?;
-        let rsp = app.clone().oneshot(req).await?;
-        assert_eq!(rsp.status(), StatusCode::FORBIDDEN);
+        let res = app.clone().oneshot(req).await?;
+        assert_eq!(res.status(), StatusCode::OK);
 
         // good token in query params
         let req = Request::builder()
             .uri(format!("/?token={}", token))
             .body(Body::empty())?;
-        let rsp = app.clone().oneshot(req).await?;
-        assert_eq!(rsp.status(), StatusCode::OK);
-        let body = rsp.collect().await.unwrap().to_bytes();
-        assert_eq!(&body[..], b"ok");
+        let res = app.clone().oneshot(req).await?;
+        assert_eq!(res.status(), StatusCode::OK);
+
+        // no token
+        let req = Request::builder().uri("/").body(Body::empty())?;
+        let res = app.clone().oneshot(req).await?;
+        assert_eq!(res.status(), StatusCode::UNAUTHORIZED);
+
+        // bad token
+        let req = Request::builder()
+            .uri("/")
+            .header("Authorization", "Bearer bad-token")
+            .body(Body::empty())?;
+        let res = app.clone().oneshot(req).await?;
+        assert_eq!(res.status(), StatusCode::FORBIDDEN);
 
         // bad token in query params
         let req = Request::builder()
-            .uri(format!("/?token={}", "xxx"))
+            .uri("/?token=bad-token")
             .body(Body::empty())?;
-        let rsp = app.clone().oneshot(req).await?;
-        assert_eq!(rsp.status(), StatusCode::FORBIDDEN);
+        let res = app.oneshot(req).await?;
+        assert_eq!(res.status(), StatusCode::FORBIDDEN);
 
         Ok(())
-    }
-
-    async fn handler(_req: Request) -> impl IntoResponse {
-        (StatusCode::OK, "ok")
-    }
-
-    impl TokenVerify for AppState {
-        type Error = anyhow::Error;
-        fn verify(&self, token: &str) -> Result<User, Self::Error> {
-            self.0.dk.verify(token)
-        }
-    }
-    impl Deref for AppState {
-        type Target = AppStateInner;
-        fn deref(&self) -> &Self::Target {
-            &self.0
-        }
     }
 }

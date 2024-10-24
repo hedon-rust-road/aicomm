@@ -4,15 +4,13 @@ use axum::{
     response::IntoResponse,
     Extension, Json,
 };
-use chat_core::User;
 use tokio::fs;
 use tracing::{info, warn};
 
-use crate::{
-    models::{ChatFile, CreateMessage, ListMessages},
-    AppError, AppState,
-};
+use crate::{AppError, AppState, ChatFile, CreateMessage, ListMessages};
+use chat_core::User;
 
+/// Send a new message in the chat.
 #[utoipa::path(
     post,
     path = "/api/chats/{id}",
@@ -27,7 +25,6 @@ use crate::{
         ("token" = [])
     )
 )]
-/// Send a new message in the chat.
 pub(crate) async fn send_message_handler(
     Extension(user): Extension<User>,
     State(state): State<AppState>,
@@ -35,15 +32,18 @@ pub(crate) async fn send_message_handler(
     Json(input): Json<CreateMessage>,
 ) -> Result<impl IntoResponse, AppError> {
     let msg = state.create_message(input, id, user.id as _).await?;
+
     Ok((StatusCode::CREATED, Json(msg)))
 }
 
+/// List all messages in the chat.
 #[utoipa::path(
     get,
     path = "/api/chats/{id}/messages",
     params(
         ("id" = u64, Path, description = "Chat id"),
         ListMessages
+
     ),
     responses(
         (status = 200, description = "List of messages", body = Vec<Message>),
@@ -53,7 +53,6 @@ pub(crate) async fn send_message_handler(
         ("token" = [])
     )
 )]
-/// List all messages in the chat.
 pub(crate) async fn list_message_handler(
     State(state): State<AppState>,
     Path(id): Path<u64>,
@@ -70,21 +69,20 @@ pub(crate) async fn file_handler(
 ) -> Result<impl IntoResponse, AppError> {
     if user.ws_id != ws_id {
         return Err(AppError::NotFound(
-            "File doesn't exists or you don't have permission".to_string(),
+            "File doesn't exist or you don't have permission".to_string(),
         ));
     }
-
     let base_dir = state.config.server.base_dir.join(ws_id.to_string());
     let path = base_dir.join(path);
     if !path.exists() {
-        return Err(AppError::NotFound("File doesn't exists".to_string()));
+        return Err(AppError::NotFound("File doesn't exist".to_string()));
     }
 
     let mime = mime_guess::from_path(&path).first_or_octet_stream();
+    // TODO: streaming
     let body = fs::read(path).await?;
     let mut headers = HeaderMap::new();
-    headers.insert("Content-Type", mime.to_string().parse().unwrap());
-
+    headers.insert("content-type", mime.to_string().parse().unwrap());
     Ok((headers, body))
 }
 
@@ -99,7 +97,7 @@ pub(crate) async fn upload_handler(
     while let Some(field) = multipart.next_field().await.unwrap() {
         let filename = field.file_name().map(|name| name.to_string());
         let (Some(filename), Ok(data)) = (filename, field.bytes().await) else {
-            warn!("Failed to read multipart filed");
+            warn!("Failed to read multipart field");
             continue;
         };
 
@@ -109,7 +107,7 @@ pub(crate) async fn upload_handler(
             info!("File {} already exists: {:?}", filename, path);
         } else {
             fs::create_dir_all(path.parent().expect("file path parent should exists")).await?;
-            fs::write(path.clone(), data).await?;
+            fs::write(path, data).await?;
         }
         files.push(file.url());
     }

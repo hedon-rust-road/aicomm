@@ -23,6 +23,7 @@ Authorization: Bearer {{token}}
 {
     "name": "hedon chat",
     "members": [1,2],
+    "agents": [],
     "public": true
 }
 
@@ -33,5 +34,6 @@ Authorization: Bearer {{token}}
 
 {
     "members": [1, 2],
+    "agents": [],
     "public": false
 }
