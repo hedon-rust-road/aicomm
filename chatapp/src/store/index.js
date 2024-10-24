@@ -189,6 +189,34 @@ export default createStore({
         throw error;
       }
     },
+    async uploadFiles({ state }, files) {
+      try {
+        const formData = new FormData();
+        files.forEach((file) => {
+          formData.append('files', file);
+        });
+
+        const response = await axios.post(`${getUrlBase()}/upload`, formData, {
+          headers: {
+            'Authorization': `Bearer ${state.token}`,
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+
+        console.log('upload files response', response);
+
+        const uploadedFiles = response.data.map((path) => ({
+          path,
+          fullUrl: `${getUrlBase()}${path}?token=${state.token}`,
+        }));
+
+        console.log('uploadedFiles', uploadedFiles);
+        return uploadedFiles;
+      } catch (error) {
+        console.error('Failed to upload files:', error);
+        throw error;
+      }
+    },
     addMessage({ commit }, { channelId, message }) {
       commit('addMessage', { channelId, message });
     },
