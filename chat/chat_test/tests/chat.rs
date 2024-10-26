@@ -16,7 +16,7 @@ test1:
     name: user 1 create chat
     steps:
         - signin
-            email: tchen@acme.org
+            email: hedon@example.com
             password: 123456
         - create_chat
             name: test
@@ -125,7 +125,6 @@ impl ChatServer {
         };
 
         ret.token = ret.signin().await?;
-
         Ok(ret)
     }
 
@@ -134,7 +133,7 @@ impl ChatServer {
             .client
             .post(format!("http://{}/api/signin", self.addr))
             .header("Content-Type", "application/json")
-            .body(r#"{"email": "tchen@acme.org","password":"123456"}"#)
+            .body(r#"{"email": "hedon@example.com","password":"123456"}"#)
             .send()
             .await?;
 

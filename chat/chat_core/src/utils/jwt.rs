@@ -52,7 +52,7 @@ mod tests {
         let ek = EncodingKey::load(encoding_pem)?;
         let dk = DecodingKey::load(decoding_pem)?;
 
-        let user = User::new(1, "Tyr Chen", "tchen@acme.org");
+        let user = User::new(1, "hedon", "hedon@example.com");
 
         let token = ek.sign(user.clone())?;
         let user2 = dk.verify(&token)?;

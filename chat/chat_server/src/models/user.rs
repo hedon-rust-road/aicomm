@@ -215,7 +215,7 @@ mod tests {
     async fn create_duplicate_user_should_fail() -> Result<()> {
         let (_tdb, state) = AppState::new_for_test().await?;
 
-        let input = CreateUser::new("acme", "Tyr Chen", "tchen@acme.org", "hunter42");
+        let input = CreateUser::new("hdw", "hedon", "hedon@example.com", "hunter42");
         let ret = state.create_user(&input).await;
         match ret {
             Err(AppError::EmailAlreadyExists(email)) => {

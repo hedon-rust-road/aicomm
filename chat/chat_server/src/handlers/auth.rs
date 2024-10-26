@@ -82,7 +82,7 @@ mod tests {
     #[tokio::test]
     async fn signup_duplicate_user_should_409() -> Result<()> {
         let (_tdb, state) = AppState::new_for_test().await?;
-        let input = CreateUser::new("acme", "Tyr Chen", "tchen@acme.org", "123456");
+        let input = CreateUser::new("hdw", "hedon", "hedon@example.com", "123456");
 
         let ret = signup_handler(State(state), Json(input))
             .await
@@ -91,14 +91,14 @@ mod tests {
         let body = ret.into_body().collect().await?.to_bytes();
         let ret: ErrorOutput = serde_json::from_slice(&body)?;
 
-        assert_eq!(ret.error, "email already exists: tchen@acme.org");
+        assert_eq!(ret.error, "email already exists: hedon@example.com");
         Ok(())
     }
 
     #[tokio::test]
     async fn signin_should_work() -> Result<()> {
         let (_tdb, state) = AppState::new_for_test().await?;
-        let email = "tchen@acme.org";
+        let email = "hedon@example.com";
         let password = "123456";
         let input = SigninUser::new(email, password);
         let ret = signin_handler(State(state), Json(input))
@@ -115,7 +115,7 @@ mod tests {
     #[tokio::test]
     async fn signin_with_non_exist_user_should_403() -> Result<()> {
         let (_tdb, state) = AppState::new_for_test().await?;
-        let email = "tchen1@acme.org";
+        let email = "hedon1@example.com";
         let password = "123456";
         let input = SigninUser::new(email, password);
         let ret = signin_handler(State(state), Json(input))
