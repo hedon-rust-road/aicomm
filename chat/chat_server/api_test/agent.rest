@@ -1,0 +1,39 @@
+### signin - expired token
+# @name signin
+POST http://localhost:6688/api/signin
+Content-Type: application/json
+
+{
+    "email": "hedon@example.com",
+    "password": "123456"
+}
+
+@token = {{signin.response.body.token}}
+
+
+### list chat agents
+GET http://localhost:6688/api/chats/1/agents
+Authorization: Bearer {{token}}
+
+### create chat agent
+POST http://localhost:6688/api/chats/1/agents
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "name": "agent1",
+    "type": "proxy",
+    "prompt": "You are a helpful assistant"
+}
+
+
+### update chat agent
+PATCH http://localhost:6688/api/chats/1/agents
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "id": 1,
+    "prompt": "You are a helpful assistant",
+    "args": {}
+}
