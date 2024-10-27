@@ -2,7 +2,7 @@ use anyhow::anyhow;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
-use crate::{AiService, Message};
+use crate::{AiAdapter, AiService, Message};
 
 pub struct OpenAIAdapter {
     host: String,
@@ -92,6 +92,12 @@ impl AiService for OpenAIAdapter {
             .content;
 
         Ok(content)
+    }
+}
+
+impl From<OpenAIAdapter> for AiAdapter {
+    fn from(value: OpenAIAdapter) -> Self {
+        AiAdapter::OpenAI(value)
     }
 }
 
