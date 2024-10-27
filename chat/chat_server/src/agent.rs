@@ -1,7 +1,6 @@
 use std::env;
 
 use ai_sdk::{AiAdapter, AiService, OllamaAdapter, OpenAIAdapter};
-use axum_extra::headers::Age;
 use chat_core::{AdapterType, Agent, AgentDecision, AgentError, AgentType, ChatAgent};
 
 pub enum AgentVariant {
@@ -10,6 +9,7 @@ pub enum AgentVariant {
     Tap(TapAgent),
 }
 
+#[allow(unused)]
 pub struct ProxyAgent {
     pub name: String,
     pub adapter: AiAdapter,
@@ -17,6 +17,7 @@ pub struct ProxyAgent {
     pub args: serde_json::Value,
 }
 
+#[allow(unused)]
 pub struct ReplyAgent {
     pub name: String,
     pub adapter: AiAdapter,
@@ -24,6 +25,7 @@ pub struct ReplyAgent {
     pub args: serde_json::Value,
 }
 
+#[allow(unused)]
 pub struct TapAgent {
     pub name: String,
     pub adapter: AiAdapter,

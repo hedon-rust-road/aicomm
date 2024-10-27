@@ -1,5 +1,4 @@
 use chat_core::{AdapterType, AgentType, ChatAgent};
-use jwt_simple::reexports::rand::rngs::adapter;
 use serde::{Deserialize, Serialize};
 use tracing::info;
 use utoipa::ToSchema;
