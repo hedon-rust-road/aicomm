@@ -97,7 +97,7 @@ impl AppState {
                 .find(|m| m != &(user_id as i64))
                 .expect("other user should exists");
 
-            sqlx::query_as(
+            sqlx::query_as::<_, (i64,)>(
                 r#"
                 INSERT INTO messages (chat_id, sender_id, content, files)
                 VALUES ($1, $2, $3, $4)
@@ -105,7 +105,7 @@ impl AppState {
                 "#,
             )
             .bind(chat_id as i64)
-            .bind(other_user_id as i64)
+            .bind(other_user_id)
             .bind(reply)
             .bind(&input.files)
             .fetch_one(&self.pool)
