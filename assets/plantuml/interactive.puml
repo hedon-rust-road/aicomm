@@ -1,0 +1,21 @@
+@startuml interactive
+
+actor User1
+
+entity ChatServer
+entity ProxyAgent1
+database Postgres
+entity NotifyServer
+entity ProxyAgent2
+
+actor User2
+
+User1 -> ChatServer : send message
+ChatServer -> ProxyAgent1 : hook messages
+ProxyAgent1 -> ChatServer : modify messages
+ChatServer -> Postgres : save message
+Postgres -> NotifyServer : notify
+NotifyServer -> ProxyAgent2 : hook messages
+ProxyAgent2 -> User2 : send message
+
+@enduml
