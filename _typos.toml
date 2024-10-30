@@ -8,4 +8,5 @@ extend-exclude = [
     "**/notify_server/index.html",
     "**/node_modules/*",
     "**/fixtures/**",
+    "assets/*",
 ]

@@ -53,6 +53,10 @@ impl Agent for ReplyAgent {
         msg: &str,
         _ctx: &chat_core::AgentContext,
     ) -> Result<AgentDecision, AgentError> {
+        // TODO: enhance the reply agent promption
+        // 1. create embedding for the message
+        // 2. search related messages from vector db with embedding
+        // 3. query llm with prompt and related messages
         let prompt = format!("{} {}", self.prompt, msg);
         let messages = vec![ai_sdk::Message::user(prompt)];
         let res = self.adapter.complete(&messages).await?;

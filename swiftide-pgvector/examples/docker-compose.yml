@@ -1,0 +1,9 @@
+services:
+  swiftide-pgvector:
+    image: pgvector/pgvector:0.7.4-pg17
+    container_name: swiftide-pgvector
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+    ports:
+      - 5433:5432

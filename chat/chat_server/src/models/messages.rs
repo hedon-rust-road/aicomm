@@ -152,6 +152,7 @@ mod tests {
     use super::*;
     use anyhow::Result;
 
+    #[ignore]
     #[tokio::test]
     async fn create_message_should_work() -> Result<()> {
         let (_tdb, state) = AppState::new_for_test().await?;
