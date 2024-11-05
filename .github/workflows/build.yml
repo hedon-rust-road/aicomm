@@ -3,12 +3,12 @@ name: build
 on:
   push:
     branches:
-      - main
+      - master
     tags:
       - v*
   pull_request:
     branches:
-      - main
+      - master
 
 permissions:
   contents: write
@@ -46,8 +46,6 @@ jobs:
           sudo apt-get update
           # see https://github.com/tauri-apps/tauri/issues/3701
           sudo apt-get install -y javascriptcoregtk-4.1 libsoup-3.0 webkit2gtk-4.1 pkg-config libssl-dev
-          sudo apt install pkg-config
-          sudo apt-get install libudev-dev
       - name: Install Rust
         run: rustup toolchain install stable --component llvm-tools-preview
       - name: Install cargo-llvm-cov
