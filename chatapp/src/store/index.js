@@ -5,6 +5,28 @@ import { getUrlBase } from '../utils';
 import { initSSE } from '../utils';
 import { formatMessageDate } from '../utils'; // Add this import
 
+const network = async (store, method, url, data = null, headers = {}) => {
+  try {
+    const config = {
+      method,
+      url: `${getUrlBase()}${url}`,
+      headers,
+      data,
+    };
+    const response = await axios(config);
+    return response;
+  } catch (error) {
+    if (error.response && error.response.status === 403) {
+      console.error('Unauthorized access, logging out');
+      await store.dispatch('logout');
+      window.location.href = '/login';
+      return;
+    }
+    console.error(`Network error: ${error}`);
+    throw error;
+  }
+}
+
 export default createStore({
   state: {
     user: null,         // User information
@@ -69,6 +91,7 @@ export default createStore({
       // we do not store messages in local storage, so this is always empty
       const storedMessages = localStorage.getItem('messages');
       const storedUsers = localStorage.getItem('users');
+      const storedActiveChannelId = localStorage.getItem('activeChannelId');
 
       if (storedUser) {
         state.user = JSON.parse(storedUser);
@@ -88,6 +111,11 @@ export default createStore({
       if (storedUsers) {
         state.users = JSON.parse(storedUsers);
       }
+      if (storedActiveChannelId) {
+        const id = JSON.parse(storedActiveChannelId);
+        const channel = state.channels.find((c) => c.id === id);
+        state.activeChannel = channel;
+      }
     },
   },
   actions: {
@@ -106,7 +134,7 @@ export default createStore({
     },
     async signup({ commit }, { email, fullname, password, workspace }) {
       try {
-        const response = await axios.post(`${getUrlBase()}/signup`, {
+        const response = await network(this, 'post', '/signup', {
           email,
           fullname,
           password,
@@ -123,7 +151,7 @@ export default createStore({
     },
     async signin({ commit }, { email, password }) {
       try {
-        const response = await axios.post(`${getUrlBase()}/signin`, {
+        const response = await network(this, 'post', '/signin', {
           email,
           password,
         });
@@ -147,13 +175,14 @@ export default createStore({
       commit('setToken', null);
       commit('setWorkspace', '');
       commit('setChannels', []);
-      commit('setMessages', {});
 
       // close SSE
       this.dispatch('closeSSE');
     },
     setActiveChannel({ commit }, channel) {
       commit('setActiveChannel', channel);
+      console.log('setActiveChannel:', channel);
+      localStorage.setItem('activeChannelId', channel);
     },
     addChannel({ commit }, channel) {
       commit('addChannel', channel);
@@ -165,19 +194,10 @@ export default createStore({
     async fetchMessagesForChannel({ state, commit }, channelId) {
       if (!state.messages[channelId] || state.messages[channelId].length === 0) {
         try {
-          const response = await axios.get(`${getUrlBase()}/chats/${channelId}/messages`, {
-            headers: {
-              Authorization: `Bearer ${state.token}`,
-            },
+          const response = await network(this, 'get', `/chats/${channelId}/messages`, null, {
+            Authorization: `Bearer ${state.token}`,
           });
-        let messages = response.data;
-          // messages = messages.map((message) => {
-          //   const user = state.users[message.senderId];
-          //   return {
-          //     ...message,
-          //     sender: user,
-          //   };
-          // } );
+          const messages = response.data;
           commit('setMessages', { channelId, messages });
         } catch (error) {
           console.error(`Failed to fetch messages for channel ${channelId}:`, error);
@@ -191,11 +211,9 @@ export default createStore({
           formData.append(`files`, file);
         });
 
-        const response = await axios.post(`${getUrlBase()}/upload`, formData, {
-          headers: {
-            'Authorization': `Bearer ${state.token}`,
-            'Content-Type': 'multipart/form-data'
-          }
+        const response = await network(this, 'post', '/upload', formData, {
+          'Authorization': `Bearer ${state.token}`,
+          'Content-Type': 'multipart/form-data'
         });
 
         const uploadedFiles = response.data.map(path => ({
@@ -211,13 +229,10 @@ export default createStore({
     },
     async sendMessage({ state, commit }, payload) {
       try {
-        const response = await axios.post(`${getUrlBase()}/chats/${payload.chatId}`, payload, {
-          headers: {
-            Authorization: `Bearer ${state.token}`,
-          },
+        const response = await network(this, 'post', `/chats/${payload.chatId}`, payload, {
+          'Authorization': `Bearer ${state.token}`,
         });
         console.log('Message sent:', response.data);
-        // commit('addMessage', { channelId: payload.chatId, message: response.data });
       } catch (error) {
         console.error('Failed to send message:', error);
         throw error;
@@ -253,7 +268,7 @@ export default createStore({
       return state.channels.filter((channel) => channel.type !== 'single');
     },
     getSingChannels(state) {
-      const channels =  state.channels.filter((channel) => channel.type === 'single');
+      const channels = state.channels.filter((channel) => channel.type === 'single');
       // return channel member that is not myself
       return channels.map((channel) => {
         let members = channel.members;
@@ -282,10 +297,8 @@ async function loadState(response, self, commit) {
 
   try {
     // fetch all workspace users
-    const usersResp = await axios.get(`${getUrlBase()}/users`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+    const usersResp = await network(this, 'get', '/users', null, {
+      'Authorization': `Bearer ${token}`,
     });
     const users = usersResp.data;
     const usersMap = {};
@@ -294,10 +307,8 @@ async function loadState(response, self, commit) {
     });
 
     // fetch all my channels
-    const chatsResp = await axios.get(`${getUrlBase()}/chats`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+    const chatsResp = await network(this, 'get', '/chats', null, {
+      'Authorization': `Bearer ${token}`,
     });
     const channels = chatsResp.data;
 
