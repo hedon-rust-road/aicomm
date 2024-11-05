@@ -3,11 +3,10 @@ use chat_core::{Chat, ChatType};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Default, ToSchema, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, ToSchema, Serialize, Deserialize)]
 pub struct CreateChat {
     pub name: Option<String>,
     pub members: Vec<i64>,
-    pub agents: Vec<i64>,
     pub public: bool,
 }
 
@@ -77,7 +76,6 @@ impl AppState {
         .bind(input.name)
         .bind(chat_type)
         .bind(input.members)
-        .bind(input.agents)
         .fetch_one(&self.pool)
         .await?;
 
@@ -143,7 +141,6 @@ impl CreateChat {
         Self {
             name,
             members: members.to_vec(),
-            agents: vec![],
             public,
         }
     }

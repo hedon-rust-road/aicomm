@@ -149,7 +149,7 @@ impl ChatServer {
             .post(format!("http://{}/api/chats", self.addr))
             .header("Authorization", format!("Bearer {}", self.token))
             .header("Content-Type", "application/json")
-            .body(r#"{"name": "test", "members": [1, 2], "agents": [], "public": false}"#);
+            .body(r#"{"name": "test", "members": [1, 2], "public": false}"#);
         let res = res.send().await?;
         assert_eq!(res.status(), StatusCode::CREATED);
         let chat: Chat = res.json().await?;
@@ -167,7 +167,7 @@ impl ChatServer {
             .header("Authorization", format!("Bearer {}", self.token))
             .header("Content-Type", "application/json")
             .body(
-                r#"{"name": "test agent", "type": "proxy", "prompt": "You are a helpful agent"}"#,
+                r#"{"name": "test agent", "type": "proxy", "adapter": "ollama", "model": "llama3.2", "prompt": "You are a helpful agent"}"#,
             );
         let res = res.send().await?;
         assert_eq!(res.status(), StatusCode::CREATED);

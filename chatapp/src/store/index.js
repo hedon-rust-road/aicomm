@@ -1,7 +1,9 @@
+import { createStore } from 'vuex';
 import axios from 'axios';
 import { jwtDecode } from "jwt-decode";
-import { createStore } from 'vuex';
-import { formatMessageDate, getUrlBase, initSSE } from '../utils';
+import { getUrlBase } from '../utils';
+import { initSSE } from '../utils';
+import { formatMessageDate } from '../utils'; // Add this import
 
 export default createStore({
   state: {
@@ -112,6 +114,7 @@ export default createStore({
         });
 
         const user = await loadState(response, this, commit);
+
         return user;
       } catch (error) {
         console.error('Signup failed:', error);
@@ -124,8 +127,6 @@ export default createStore({
           email,
           password,
         });
-
-        console.log('signin response', response);
 
         const user = await loadState(response, this, commit);
         return user;
@@ -170,10 +171,42 @@ export default createStore({
             },
           });
         let messages = response.data;
+          // messages = messages.map((message) => {
+          //   const user = state.users[message.senderId];
+          //   return {
+          //     ...message,
+          //     sender: user,
+          //   };
+          // } );
           commit('setMessages', { channelId, messages });
         } catch (error) {
           console.error(`Failed to fetch messages for channel ${channelId}:`, error);
         }
+      }
+    },
+    async uploadFiles({ state, commit }, files) {
+      try {
+        const formData = new FormData();
+        files.forEach(file => {
+          formData.append(`files`, file);
+        });
+
+        const response = await axios.post(`${getUrlBase()}/upload`, formData, {
+          headers: {
+            'Authorization': `Bearer ${state.token}`,
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+
+        const uploadedFiles = response.data.map(path => ({
+          path,
+          fullUrl: `${getUrlBase()}${path}?token=${state.token}`
+        }));
+
+        return uploadedFiles;
+      } catch (error) {
+        console.error('Failed to upload files:', error);
+        throw error;
       }
     },
     async sendMessage({ state, commit }, payload) {
@@ -184,36 +217,9 @@ export default createStore({
           },
         });
         console.log('Message sent:', response.data);
+        // commit('addMessage', { channelId: payload.chatId, message: response.data });
       } catch (error) {
         console.error('Failed to send message:', error);
-        throw error;
-      }
-    },
-    async uploadFiles({ state }, files) {
-      try {
-        const formData = new FormData();
-        files.forEach((file) => {
-          formData.append('files', file);
-        });
-
-        const response = await axios.post(`${getUrlBase()}/upload`, formData, {
-          headers: {
-            'Authorization': `Bearer ${state.token}`,
-            'Content-Type': 'multipart/form-data',
-          },
-        });
-
-        console.log('upload files response', response);
-
-        const uploadedFiles = response.data.map((path) => ({
-          path,
-          fullUrl: `${getUrlBase()}${path}?token=${state.token}`,
-        }));
-
-        console.log('uploadedFiles', uploadedFiles);
-        return uploadedFiles;
-      } catch (error) {
-        console.error('Failed to upload files:', error);
         throw error;
       }
     },
@@ -226,6 +232,7 @@ export default createStore({
       if (this.state.token) {
         this.dispatch('initSSE');
       }
+
     },
   },
   getters: {
@@ -246,7 +253,6 @@ export default createStore({
       return state.channels.filter((channel) => channel.type !== 'single');
     },
     getSingChannels(state) {
-      console.log('state.channels', state.channels);
       const channels =  state.channels.filter((channel) => channel.type === 'single');
       // return channel member that is not myself
       return channels.map((channel) => {
@@ -273,6 +279,7 @@ async function loadState(response, self, commit) {
   const user = jwtDecode(token); // Decode the JWT to get user info
   const workspace = { id: user.wsId, name: user.wsName };
 
+
   try {
     // fetch all workspace users
     const usersResp = await axios.get(`${getUrlBase()}/users`, {
@@ -286,8 +293,6 @@ async function loadState(response, self, commit) {
       usersMap[u.id] = u;
     });
 
-    console.log('usersMap', usersMap);
-
     // fetch all my channels
     const chatsResp = await axios.get(`${getUrlBase()}/chats`, {
       headers: {
@@ -295,6 +300,7 @@ async function loadState(response, self, commit) {
       },
     });
     const channels = chatsResp.data;
+
 
     // Store user info, token, and workspace in localStorage
     localStorage.setItem('user', JSON.stringify(user));
@@ -318,4 +324,5 @@ async function loadState(response, self, commit) {
     console.error('Failed to load user state:', error);
     throw error;
   }
+
 }

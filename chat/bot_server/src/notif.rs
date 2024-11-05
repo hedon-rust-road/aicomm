@@ -50,6 +50,8 @@ pub async fn setup_pg_listener(config: &AppConfig) -> anyhow::Result<()> {
         info!("Received notification: {:?}", notif);
 
         if let Some(notification) = Notification::load(notif.channel(), notif.payload(), &bots) {
+            info!("Processing notification: {:?}", notification);
+
             let pool = pool.clone();
             let client = client.clone();
             let fastembed = fastembed.clone();

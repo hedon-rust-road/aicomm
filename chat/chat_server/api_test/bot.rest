@@ -1,9 +1,53 @@
 ## login
+# @name signin
+POST http://localhost:6688/api/signin
+Content-Type: application/json
 
-## create chat
+{
+    "email": "hedon@example.com",
+    "password": "123456"
+}
 
-## create chat agent
+@token = {{signin.response.body.token}}
 
-## create a bot
+### create a bot
+POST http://localhost:6688/api/signup
+Content-Type: application/json
 
-## create direct chat with bot
+{
+    "workspace": "hdw",
+    "fullname": "Her",
+    "email": "her@bot.org",
+    "password": "123456"
+}
+
+### create direct chat with bot
+POST http://localhost:6688/api/chats
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+    "members": [1, 2],
+    "public": false
+}
+
+### create chat agent
+POST http://localhost:6688/api/chats/1/agents
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "name": "code guru",
+    "type": "reply",
+    "adapter": "ollama",
+    "model": "llama3.2",
+    "prompt": "You will answer questions about code."
+}
+
+### list chat's agents
+GET http://localhost:6688/api/chats/1/agents
+Authorization: Bearer {{token}}
+
+### list chats
+GET http://localhost:6688/api/chats
+Authorization: Bearer {{token}}
