@@ -1,10 +1,18 @@
 [workspace]
-members = ["chat_server", "chat_core", "notify_server", "chat_test", "ai_sdk", "bot_server"]
+members = [
+  "chat_server",
+  "chat_core",
+  "notify_server",
+  "chat_test",
+  "ai_sdk",
+  "bot_server",
+  "analytics-server",
+]
 resolver = "2"
 
 [workspace.dependencies]
 anyhow = "1.0.89"
-axum = { version = "0.7.6", features = [
+axum = { version = "0.7.7", features = [
   "http2",
   "query",
   "tracing",
