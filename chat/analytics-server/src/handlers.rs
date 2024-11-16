@@ -4,6 +4,7 @@ use axum::{
     response::IntoResponse,
 };
 use chat_core::User;
+use tracing::info;
 
 use crate::{
     events::AnalyticsEventRow,
@@ -30,6 +31,7 @@ pub(crate) async fn create_event_handler(
     Geo(geo): Geo,
     Protobuf(event): Protobuf<AnalyticsEvent>,
 ) -> Result<impl IntoResponse, AppError> {
+    info!("received event: {:?}", event);
     let mut row = AnalyticsEventRow::try_from(event)?;
     if let Some(user) = parts.extensions.get::<User>() {
         row.user_id = Some(user.id.to_string());
