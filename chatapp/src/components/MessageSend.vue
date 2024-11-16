@@ -87,6 +87,8 @@ export default {
       };
 
       console.log('Sending message:', payload);
+      
+      this.$store.dispatch("messageSent", {chatId: payload.chatId, content: payload.content, files: payload.files});
 
       try {
         this.$store.dispatch('sendMessage', payload);
