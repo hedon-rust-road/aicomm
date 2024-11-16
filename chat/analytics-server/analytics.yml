@@ -2,10 +2,10 @@ server:
   port: 6690
   # clickhouse
   db_url: http://localhost:8123
-  db_user: ~
+  db_user: default
   db_password: ~
   db_name: analytics
-  base_dir: /tmp/analytics_server
+  base_dir: /Users/hedon/clickhouse/
 auth:
   pk: |
     -----BEGIN PUBLIC KEY-----

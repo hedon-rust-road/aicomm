@@ -1,0 +1,22 @@
+
+### signin - valid
+# @name signin
+POST http://localhost:6688/api/signin
+Content-Type: application/json
+
+{
+    "email": "hedon@example.com",
+    "password": "123456"
+}
+
+@token = {{signin.response.body.token}}
+
+
+### send an event
+curl -X POST http://localhost:6690/api/event \
+  -H "Content-Type: application/protobuf" \
+  -H "Authorization: Bearer {{token}}" \
+  -H "X-Country: China" \
+  -H "X-Region: Shanghai" \
+  -H "X-City: Shanghai" \
+  --data-binary @./fixtures/event.bin

@@ -1,13 +1,16 @@
 use axum::{
     async_trait,
     body::Body,
-    extract::FromRequest,
-    http::StatusCode,
+    extract::{FromRequest, FromRequestParts},
+    http::{request::Parts, StatusCode},
     response::{IntoResponse, Response},
 };
 use futures_util::StreamExt;
 
+use crate::pb::GeoLocation;
+
 pub struct Protobuf<T>(pub T);
+pub struct Geo(pub Option<GeoLocation>);
 
 #[allow(unused)]
 pub enum ProtobufRejection {
@@ -64,4 +67,34 @@ where
             .map(Self)
             .map_err(ProtobufRejection::ProtobufDecodeError)
     }
+}
+
+#[async_trait]
+impl<S> FromRequestParts<S> for Geo
+where
+    S: Send + Sync,
+{
+    type Rejection = ProtobufRejection;
+
+    async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
+        let country = get_header_value(parts, "x-country");
+        let city = get_header_value(parts, "x-city");
+        let region = get_header_value(parts, "x-region");
+        Ok(Self(match (country, city, region) {
+            (Some(country), Some(city), Some(region)) => Some(GeoLocation {
+                country,
+                city,
+                region,
+            }),
+            _ => None,
+        }))
+    }
+}
+
+fn get_header_value(parts: &Parts, name: &str) -> Option<String> {
+    parts
+        .headers
+        .get(name)
+        .and_then(|value| value.to_str().ok())
+        .map(|v| v.to_string())
 }

@@ -2,7 +2,7 @@ mod config;
 mod error;
 mod events;
 mod extractors;
-mod handler;
+mod handlers;
 mod openapi;
 
 pub mod pb;
@@ -16,7 +16,7 @@ use chat_core::middlewares::{extract_user, set_layer, TokenVerify};
 use chat_core::DecodingKey;
 use clickhouse::Client;
 use core::fmt;
-use handler::create_event_handler;
+use handlers::create_event_handler;
 use openapi::OpenApiRouter as _;
 use std::ops::Deref;
 use std::sync::Arc;
@@ -26,6 +26,7 @@ use tower_http::cors::{self, CorsLayer};
 pub use config::AppConfig;
 pub use config::*;
 pub use error::*;
+pub use events::*;
 
 #[derive(Debug, Clone)]
 pub struct AppState {

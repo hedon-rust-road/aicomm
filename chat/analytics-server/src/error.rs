@@ -5,6 +5,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use tracing::warn;
 use utoipa::ToSchema;
 
 #[derive(Debug, ToSchema, Serialize, Deserialize)]
@@ -22,6 +23,9 @@ pub enum AppError {
 
     #[error("missing event data")]
     MissingEventData,
+
+    #[error("missing system info")]
+    MissingSystemInfo,
 
     #[error(transparent)]
     AnyError(#[from] anyhow::Error),
@@ -41,9 +45,13 @@ impl IntoResponse for AppError {
             Self::ClickhouseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::MissingEventContext => StatusCode::BAD_REQUEST,
             Self::MissingEventData => StatusCode::BAD_REQUEST,
+            Self::MissingSystemInfo => StatusCode::BAD_REQUEST,
             Self::AnyError(_) => StatusCode::INTERNAL_SERVER_ERROR,
         };
 
-        (status, Json(ErrorOutput::new(self.to_string()))).into_response()
+        let msg = self.to_string();
+        warn!("status: {status}, error: {msg}");
+
+        (status, Json(ErrorOutput::new(msg))).into_response()
     }
 }
