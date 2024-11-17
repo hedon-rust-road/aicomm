@@ -40,7 +40,8 @@ struct ChatServer {
 
 struct NotifyServer;
 
-const WILD_ADDR: &str = "0.0.0.0:0";
+const CHAT_SERVER_ADDR: &str = "127.0.0.1:56688";
+const NOTIFY_SERVER_ADDR: &str = "127.0.0.1:56687";
 
 #[tokio::test]
 async fn chat_server_should_work() -> Result<()> {
@@ -60,7 +61,7 @@ impl NotifyServer {
         let mut config = notify_server::AppConfig::load()?;
         config.server.db_url = db_url.to_string();
         let app = notify_server::get_router(config).await?;
-        let listener = TcpListener::bind(WILD_ADDR).await?;
+        let listener = TcpListener::bind(NOTIFY_SERVER_ADDR).await?;
         let addr = listener.local_addr()?;
 
         tokio::spawn(async move {
@@ -108,7 +109,7 @@ impl NotifyServer {
 impl ChatServer {
     async fn new(state: chat_server::AppState) -> Result<Self> {
         let app = chat_server::get_router(state).await?;
-        let listener = TcpListener::bind(WILD_ADDR).await?;
+        let listener = TcpListener::bind(CHAT_SERVER_ADDR).await?;
         let addr = listener.local_addr()?;
 
         tokio::spawn(async move {
