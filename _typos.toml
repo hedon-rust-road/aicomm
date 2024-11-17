@@ -9,4 +9,5 @@ extend-exclude = [
     "**/node_modules/*",
     "**/fixtures/**",
     "assets/*",
+    "chatapp/src/gen/*",
 ]

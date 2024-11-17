@@ -13,7 +13,7 @@ clickhouse = { version = "0.13.0", features = ["rustls-tls", "time"] }
 futures-util = { version = "0.3.31", default-features = false }
 prost = "0.13.3"
 prost-types = "0.13.3"
-reqwest = { workspace = true, features = ["json"] }
+reqwest = { workspace = true }
 serde = { workspace = true }
 serde_json.workspace = true
 serde_yaml = "0.9.34"
