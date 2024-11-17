@@ -25,6 +25,9 @@ pub enum AppError {
     #[error("{0}")]
     ChatFileError(String),
 
+    #[error("not logged in")]
+    NotLoggedIn,
+
     #[error("create agent error: {0}")]
     CreateAgentError(String),
 
@@ -76,6 +79,7 @@ impl IntoResponse for AppError {
             Self::CreateAgentError(_) => StatusCode::BAD_REQUEST,
             Self::UpdateAgentError(_) => StatusCode::BAD_REQUEST,
             Self::NotChatMemberError { .. } => StatusCode::FORBIDDEN,
+            Self::NotLoggedIn => StatusCode::UNAUTHORIZED,
             Self::NotFound(_) => StatusCode::NOT_FOUND,
             Self::IoError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::CreateMessageError(_) => StatusCode::BAD_REQUEST,

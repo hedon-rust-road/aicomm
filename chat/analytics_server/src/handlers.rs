@@ -3,7 +3,6 @@ use axum::{
     http::{request::Parts, StatusCode},
     response::IntoResponse,
 };
-use chat_core::User;
 use tracing::info;
 
 use crate::{
@@ -33,24 +32,7 @@ pub(crate) async fn create_event_handler(
 ) -> Result<impl IntoResponse, AppError> {
     info!("received event: {:?}", event);
     let mut row = AnalyticsEventRow::try_from(event)?;
-    if let Some(user) = parts.extensions.get::<User>() {
-        row.user_id = Some(user.id.to_string());
-    } else {
-        row.user_id = None;
-    }
-
-    if let Some(geo) = geo {
-        row.geo_country = Some(geo.country);
-        row.geo_city = Some(geo.city);
-        row.geo_region = Some(geo.region);
-    } else {
-        row.geo_country = None;
-        row.geo_city = None;
-        row.geo_region = None;
-    }
-
-    // override server_ts with current timestamp
-    row.server_ts = chrono::Utc::now().timestamp_millis();
+    row.update_with_server_info(&parts, geo);
 
     let data = serde_json::to_string_pretty(&row).unwrap();
     println!("event: {}", data);

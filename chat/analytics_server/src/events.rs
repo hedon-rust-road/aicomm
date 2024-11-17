@@ -1,4 +1,6 @@
 use analytics_event::EventType;
+use axum::http::request::Parts;
+use chat_core::User;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 
@@ -64,6 +66,7 @@ pub enum EventTypeRow {
     #[default]
     Unspecified,
 }
+
 #[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ExitCodeRow {
@@ -75,6 +78,29 @@ pub enum ExitCodeRow {
 
 trait EventConsume {
     fn consume(self, row: &mut AnalyticsEventRow) -> Result<(), AppError>;
+}
+
+impl AnalyticsEventRow {
+    pub fn update_with_server_info(&mut self, parts: &Parts, geo: Option<GeoLocation>) {
+        if let Some(user) = parts.extensions.get::<User>() {
+            self.user_id = Some(user.id.to_string());
+        } else {
+            self.user_id = None;
+        }
+
+        if let Some(geo) = geo {
+            self.geo_country = Some(geo.country);
+            self.geo_city = Some(geo.city);
+            self.geo_region = Some(geo.region);
+        } else {
+            self.geo_country = None;
+            self.geo_city = None;
+            self.geo_region = None;
+        }
+
+        // override server_ts with current timestamp
+        self.server_ts = chrono::Utc::now().timestamp_millis();
+    }
 }
 
 impl TryFrom<AnalyticsEvent> for AnalyticsEventRow {
