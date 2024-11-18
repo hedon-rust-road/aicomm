@@ -1,6 +1,7 @@
-CREATE TABLE analytics_events (
+CREATE TABLE analytics.analytics_events (
     -- EventContext fields
     client_id String,
+    session_id String,
     app_version String,
     system_os String,
     system_arch String,
@@ -41,13 +42,14 @@ CREATE TABLE analytics_events (
     navigation_to Nullable (String)
 ) ENGINE = MergeTree ()
 ORDER BY (
-        server_ts, event_type, client_id
+        event_type, session_id, client_id, server_ts
     );
 
 -- Insert sample data for AppStartEvent
 INSERT INTO
-    analytics_events (
+    analytics.analytics_events (
         client_id,
+        session_id,
         app_version,
         system_os,
         system_arch,
@@ -59,6 +61,7 @@ INSERT INTO
     )
 VALUES (
         'client_001',
+        'session_001',
         '1.0.0',
         'macOS',
         'x86_64',
@@ -70,8 +73,9 @@ VALUES (
     );
 -- Insert sample data for UserLoginEvent
 INSERT INTO
-    analytics_events (
+    analytics.analytics_events (
         client_id,
+        session_id,
         app_version,
         system_os,
         system_arch,
@@ -86,6 +90,7 @@ INSERT INTO
     )
 VALUES (
         'client_002',
+        'session_002',
         '1.0.1',
         'Windows',
         'x86_64',
@@ -100,8 +105,9 @@ VALUES (
     );
 -- Insert sample data for MessageSentEvent
 INSERT INTO
-    analytics_events (
+    analytics.analytics_events (
         client_id,
+        session_id,
         app_version,
         system_os,
         system_arch,
@@ -118,6 +124,7 @@ INSERT INTO
     )
 VALUES (
         'client_003',
+        'session_003',
         '1.0.2',
         'Linux',
         'aarch64',
@@ -134,8 +141,9 @@ VALUES (
     );
 -- Insert sample data for AppExitEvent
 INSERT INTO
-    analytics_events (
+    analytics.analytics_events (
         client_id,
+        session_id,
         app_version,
         system_os,
         system_arch,
@@ -148,6 +156,7 @@ INSERT INTO
     )
 VALUES (
         'client_004',
+        'session_004',
         '1.0.3',
         'iOS',
         'arm64',
@@ -160,8 +169,9 @@ VALUES (
     );
 -- Insert sample data for NavigationEvent
 INSERT INTO
-    analytics_events (
+    analytics.analytics_events (
         client_id,
+        session_id,
         app_version,
         system_os,
         system_arch,
@@ -176,6 +186,7 @@ INSERT INTO
     )
 VALUES (
         'client_005',
+        'session_005',
         '1.0.4',
         'Android',
         'arm64-v8a',

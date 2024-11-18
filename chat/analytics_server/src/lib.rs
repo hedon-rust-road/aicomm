@@ -16,6 +16,7 @@ use chat_core::middlewares::{extract_user, set_layer, TokenVerify};
 use chat_core::DecodingKey;
 use clickhouse::Client;
 use core::fmt;
+use dashmap::DashMap;
 use handlers::create_event_handler;
 use openapi::OpenApiRouter as _;
 use std::ops::Deref;
@@ -38,6 +39,7 @@ pub struct AppStateInner {
     pub(crate) config: AppConfig,
     pub(crate) dk: DecodingKey,
     pub(crate) client: Client,
+    pub(crate) sessions: Arc<DashMap<String, (String, i64)>>,
 }
 
 pub async fn get_router(state: AppState) -> Result<Router, AppError> {
@@ -93,8 +95,15 @@ impl AppState {
         if let Some(password) = config.server.db_password.as_ref() {
             client = client.with_password(password);
         }
+        // TODO: we should load sessions from db, this is just a temporary solution
+        let sessions = Arc::new(DashMap::new());
         Ok(Self {
-            inner: Arc::new(AppStateInner { config, dk, client }),
+            inner: Arc::new(AppStateInner {
+                config,
+                dk,
+                client,
+                sessions,
+            }),
         })
     }
 }

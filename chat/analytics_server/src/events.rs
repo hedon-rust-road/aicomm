@@ -3,13 +3,18 @@ use axum::http::request::Parts;
 use chat_core::User;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
+use tracing::info;
+use uuid::Uuid;
 
-use crate::{pb::*, AppError};
+use crate::{pb::*, AppError, AppState};
+
+const SESSION_TIMEOUT: i64 = 10 * 60 * 1000; // 10 minutes
 
 #[derive(Debug, Default, Clone, Row, Serialize, Deserialize)]
 pub struct AnalyticsEventRow {
     // EventContext fields
     pub client_id: String,
+    pub session_id: String,
     pub app_version: String,
     pub system_os: String,
     pub system_arch: String,
@@ -100,6 +105,29 @@ impl AnalyticsEventRow {
 
         // override server_ts with current timestamp
         self.server_ts = chrono::Utc::now().timestamp_millis();
+    }
+
+    pub fn set_session_id(&mut self, state: &AppState) {
+        if let Some(mut v) = state.sessions.get_mut(&self.client_id) {
+            let (session_id, last_ts) = v.value_mut();
+            if self.client_ts - *last_ts < SESSION_TIMEOUT {
+                self.session_id = session_id.clone();
+                *last_ts = self.server_ts;
+            } else {
+                let new_session_id = Uuid::now_v7().to_string();
+                self.session_id = new_session_id.clone();
+                info!("Client session timeout, generated new one: {new_session_id}");
+                *last_ts = self.server_ts;
+                *session_id = new_session_id;
+            }
+        } else {
+            let session_id = Uuid::now_v7().to_string();
+            self.session_id = session_id.clone();
+            info!("No client session id found, generated new one: {session_id}");
+            state
+                .sessions
+                .insert(self.client_id.clone(), (session_id, self.client_ts));
+        }
     }
 }
 

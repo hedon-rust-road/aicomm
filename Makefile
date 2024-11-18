@@ -37,3 +37,4 @@ run-docker: kill-docker
 kill-docker:
 	-$(DOCKER) kill chat notify bot analytics || true
 	-$(DOCKER) rm chat notify bot analytics || true
+	docker ps

@@ -33,6 +33,7 @@ pub(crate) async fn create_event_handler(
     info!("received event: {:?}", event);
     let mut row = AnalyticsEventRow::try_from(event)?;
     row.update_with_server_info(&parts, geo);
+    row.set_session_id(&state);
 
     let data = serde_json::to_string_pretty(&row).unwrap();
     println!("event: {}", data);
