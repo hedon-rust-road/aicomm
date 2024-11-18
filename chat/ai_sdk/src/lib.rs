@@ -7,6 +7,7 @@ use std::fmt;
 pub enum AiAdapter {
     OpenAI(OpenAIAdapter),
     Ollama(OllamaAdapter),
+    Test(TestAdapter),
 }
 
 #[derive(Debug, Clone)]
@@ -34,6 +35,7 @@ impl AiService for AiAdapter {
         match self {
             AiAdapter::OpenAI(adapter) => adapter.complete(messages).await,
             AiAdapter::Ollama(adapter) => adapter.complete(messages).await,
+            AiAdapter::Test(adapter) => adapter.complete(messages).await,
         }
     }
 }

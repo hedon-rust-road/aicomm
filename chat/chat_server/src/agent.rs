@@ -1,6 +1,6 @@
 use std::env;
 
-use ai_sdk::{AiAdapter, AiService, OllamaAdapter, OpenAIAdapter};
+use ai_sdk::{AiAdapter, AiService, OllamaAdapter, OpenAIAdapter, TestAdapter};
 use chat_core::{AdapterType, Agent, AgentDecision, AgentError, AgentType, ChatAgent};
 
 pub enum AgentVariant {
@@ -96,6 +96,7 @@ impl From<ChatAgent> for AgentVariant {
                 OpenAIAdapter::new(api_key, agent.model).into()
             }
             AdapterType::Ollama => OllamaAdapter::new_local(agent.model).into(),
+            AdapterType::Test => TestAdapter::default().into(),
         };
 
         match agent.r#type {
