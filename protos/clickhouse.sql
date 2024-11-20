@@ -45,6 +45,63 @@ ORDER BY (
         event_type, session_id, client_id, server_ts
     );
 
+-- Create aggregated sessions table
+CREATE TABLE analytics.sessions (
+    date date,
+    client_id String,
+    session_id String,
+    session_start SimpleAggregateFunction (min, DateTime64 (3)),
+    session_end SimpleAggregateFunction (max, DateTime64 (3)),
+    total_events UInt32
+) ENGINE = SummingMergeTree ()
+ORDER BY (date, client_id, session_id);
+-- Create materialized view to aggregate sessions
+CREATE MATERIALIZED VIEW analytics.sessions_mv TO analytics.sessions AS
+SELECT
+    toDate (server_ts) AS date,
+    client_id,
+    session_id,
+    minSimpleState (server_ts) AS session_start,
+    maxSimpleState (server_ts) AS session_end,
+    count(1) AS total_events
+FROM analytics.analytics_events
+GROUP BY
+    date,
+    client_id,
+    session_id;
+-- populate sessions table
+-- INSERT INTO analytics.sessions...;
+-- query sessions table
+SELECT *, dateDiff(
+        'second', session_start, session_end
+    ) AS session_length
+FROM analytics.sessions FINAL;
+
+CREATE TABLE analytics.daily_sessions (
+    date date,
+    client_id String,
+    total_session_length SimpleAggregateFunction (sum, UInt64),
+    total_events SimpleAggregateFunction (sum, UInt64)
+) ENGINE = SummingMergeTree ()
+ORDER BY (date, client_id);
+
+CREATE MATERIALIZED VIEW analytics.daily_sessions_mv TO analytics.daily_sessions AS
+SELECT
+    date,
+    client_id,
+    sumSimpleState (
+        dateDiff(
+            'second',
+            session_start,
+            session_end
+        )
+    ) AS total_session_length,
+    sumSimpleState (total_events) AS total_events
+FROM analytics.sessions
+GROUP BY
+    date,
+    client_id;
+
 -- Insert sample data for AppStartEvent
 INSERT INTO
     analytics.analytics_events (
